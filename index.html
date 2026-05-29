@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Zing — Sparkling Lemonade, Coming Soon</title>
+  <meta name="description" content="Zing sparkling lemonade is coming this summer. Get notified the second we launch in your zip code." />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Zing — Sparkling Lemonade" />
+  <meta property="og:description" content="We're bottling sunshine. Drop your email and we'll ping you the second Zing lands in your zip." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@drinkzing" />
+
+  <!-- Lemon favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍋</text></svg>">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Shrikhand&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <style>
+    /* ───────── Tokens ───────── */
+    :root {
+      --bg:         #F5F1E8;
+      --ink:        #1F2A44;
+      --ink-soft:   #5C6480;
+      --cream:      #FAF0DC;
+      --coral:      #F18B86;
+      --coral-deep: #E66B65;
+      --teal:       #6DC9BE;
+      --sun:        #FFD93D;
+      --sun-deep:   #F2BE1E;
+      --red:        #C0392B;
+
+      --font-brand:   "Caveat Brush", cursive;
+      --font-display: "Shrikhand", serif;
+      --font-body:    "Inter", system-ui, sans-serif;
+
+      --shadow-sm: 2px 2px 0 var(--ink);
+      --shadow-md: 3px 3px 0 var(--ink);
+      --shadow-lg: 5px 5px 0 var(--ink);
+    }
+
+    /* ───────── Base ───────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: var(--ink);
+    }
+    body {
+      font-family: var(--font-body);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+    button { font-family: inherit; cursor: pointer; }
+
+    /* Dot-grid texture overlay */
+    .texture {
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(31,42,68,.07) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* ══════════════════════════════════════
+       DOOR (splash / click-to-enter)
+       ══════════════════════════════════════ */
+    .door {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: grid;
+      place-items: center;
+      z-index: 100;
+      cursor: pointer;
+      transition: opacity .6s ease, transform .9s cubic-bezier(.7,0,.3,1);
+      overflow: hidden;
+    }
+    .door.gone {
+      opacity: 0;
+      transform: translateY(-10%) scale(.97);
+      pointer-events: none;
+    }
+    .door::before, .door::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,.3);
+      mix-blend-mode: overlay;
+      pointer-events: none;
+    }
+    .door::before { width: 55vmin; height: 55vmin; top: -18vmin; left: -14vmin; }
+    .door::after  { width: 65vmin; height: 65vmin; bottom: -22vmin; right: -18vmin; }
+
+    .door-stack {
+      position: relative;
+      display: grid;
+      place-items: center;
+      gap: 24px;
+      text-align: center;
+      padding: 32px 24px;
+      z-index: 1;
+    }
+
+    .door-eyebrow {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: var(--sun);
+      border: 2px solid var(--ink);
+      padding: 6px 14px 4px;
+      border-radius: 999px;
+      box-shadow: var(--shadow-sm);
+      transform: rotate(-2.5deg);
+      white-space: nowrap;
+    }
+
+    .door-lemon {
+      width: clamp(160px, 28vmin, 280px);
+      height: clamp(160px, 28vmin, 280px);
+      animation: spinLemon 7s linear infinite;
+      filter: drop-shadow(0 16px 0 rgba(31,42,68,.16));
+    }
+
+    .door-brand {
+      font-family: var(--font-brand);
+      font-size: clamp(56px, 9.5vmin, 110px);
+      color: var(--ink);
+      line-height: .9;
+      text-shadow: 5px 5px 0 var(--coral);
+    }
+    .door-tag {
+      font-size: clamp(12px, 1.4vmin, 14px);
+      font-weight: 600;
+      color: var(--ink-soft);
+      letter-spacing: .05em;
+    }
+
+    .door-cta {
+      margin-top: 8px;
+      display: inline-flex; align-items: center; gap: 10px;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: var(--cream);
+      border: 2px solid var(--ink);
+      padding: 14px 22px;
+      border-radius: 999px;
+      box-shadow: var(--shadow-md);
+      transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .door-cta:hover { background: var(--sun); transform: translate(-1px,-1px); box-shadow: var(--shadow-lg); }
+    .door-cta:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+    .door-cta .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--coral-deep);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    /* Bubbles */
+    .bubbles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .bubbles i {
+      position: absolute;
+      bottom: -40px;
+      border-radius: 50%;
+      background: rgba(31,42,68,.1);
+      animation: rise linear infinite;
+    }
+
+    /* ══════════════════════════════════════
+       STAGE (main landing)
+       ══════════════════════════════════════ */
+    .stage {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      opacity: 0;
+      transition: opacity .8s ease .25s;
+    }
+    .door.gone ~ .stage { opacity: 1; }
+
+    /* Topbar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 40px;
+      z-index: 4;
+    }
+    .topbar .brand {
+      font-family: var(--font-brand);
+      font-size: 40px;
+      color: var(--ink);
+      line-height: 1;
+      user-select: none;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: var(--cream);
+      border: 2px solid var(--ink);
+      padding: 7px 14px 5px;
+      border-radius: 999px;
+      box-shadow: var(--shadow-sm);
+    }
+    .chip .pulse-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--coral-deep);
+      box-shadow: 0 0 0 4px rgba(241,139,134,.28);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    /* Main */
+    .main {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      align-items: center;
+      gap: 48px;
+      padding: 0 40px;
+      min-height: 0;
+    }
+
+    /* Hero text */
+    .hero-text { max-width: 620px; }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 10px; font-weight: 800;
+      letter-spacing: .24em; text-transform: uppercase;
+      color: var(--ink);
+      margin-bottom: 18px;
+    }
+    .eyebrow::before {
+      content: ""; width: 26px; height: 2.5px;
+      background: var(--ink); border-radius: 2px;
+    }
+
+    h1 {
+      margin: 0 0 20px;
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: clamp(46px, 8vmin, 118px);
+      line-height: .94;
+      letter-spacing: -.01em;
+      color: var(--ink);
+      text-wrap: balance;
+    }
+    h1 .pop {
+      position: relative;
+      display: inline-block;
+      color: var(--coral-deep);
+    }
+    h1 .pop::after {
+      content: "";
+      position: absolute; left: -4%; right: -4%; bottom: -2px; height: 11px;
+      background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 11' preserveAspectRatio='none'><path d='M2 7 C 30 2, 60 10, 90 5 S 150 1, 198 7' stroke='%23FFD93D' stroke-width='6' fill='none' stroke-linecap='round'/></svg>") center/100% 100% no-repeat;
+      z-index: -1;
+    }
+
+    .sub {
+      margin: 0 0 30px;
+      font-size: clamp(14px, 1.6vmin, 17px);
+      line-height: 1.6;
+      font-weight: 500;
+      color: var(--ink-soft);
+      max-width: 46ch;
+    }
+
+    /* ── Form ── */
+    .form-wrap { display: flex; flex-direction: column; gap: 10px; max-width: 520px; }
+
+    .fields-row {
+      display: flex; flex-wrap: wrap;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .field {
+      display: flex; align-items: center;
+      background: var(--cream);
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      padding: 4px 6px 4px 16px;
+      box-shadow: var(--shadow-md);
+      transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+    }
+    .field:focus-within {
+      transform: translate(-1px,-1px);
+      box-shadow: var(--shadow-lg);
+    }
+    .field.has-error {
+      border-color: var(--red);
+      box-shadow: 3px 3px 0 var(--red);
+    }
+    .field.email { flex: 1 1 240px; min-width: 200px; }
+    .field.zip   { flex: 0 0 118px; }
+
+    .field input {
+      flex: 1; border: 0; outline: 0; background: transparent;
+      font-family: var(--font-body);
+      font-weight: 500;
+      font-size: 15px;
+      color: var(--ink);
+      padding: 13px 6px;
+      min-width: 0; width: 100%;
+    }
+    .field input::placeholder { color: var(--ink-soft); opacity: .65; }
+
+    .notify-btn {
+      appearance: none;
+      background: var(--ink);
+      color: var(--cream);
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 0 24px;
+      height: 52px;
+      box-shadow: 3px 3px 0 var(--coral-deep);
+      transition: transform .15s ease, box-shadow .15s ease, background .2s ease, opacity .2s ease;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      white-space: nowrap;
+      min-width: 130px;
+    }
+    .notify-btn:hover:not(:disabled) {
+      background: var(--coral-deep);
+      border-color: var(--coral-deep);
+      box-shadow: var(--shadow-lg);
+      transform: translate(-1px,-1px);
+    }
+    .notify-btn:active:not(:disabled) { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+    .notify-btn:disabled { opacity: .7; cursor: not-allowed; }
+    .notify-btn .arrow { transition: transform .2s ease; }
+    .notify-btn:hover:not(:disabled) .arrow { transform: translateX(3px); }
+
+    /* Spinner */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2.5px solid rgba(250,240,220,.35);
+      border-top-color: var(--cream);
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+    }
+
+    .form-meta {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .03em;
+      color: var(--ink-soft);
+    }
+
+    .form-error-msg {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--red);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* ── Success ── */
+    .success {
+      display: inline-flex; align-items: flex-start; gap: 14px;
+      background: var(--teal);
+      border: 2px solid var(--ink);
+      border-radius: 16px;
+      padding: 20px 24px;
+      box-shadow: var(--shadow-lg);
+      max-width: 460px;
+      animation: popIn .4s cubic-bezier(.2,1,.4,1);
+    }
+    .success .check {
+      flex: 0 0 34px;
+      width: 34px; height: 34px;
+      background: var(--ink); color: var(--cream);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 15px; font-weight: 800;
+      margin-top: 2px;
+    }
+    .success-text strong {
+      display: block;
+      font-family: var(--font-brand);
+      font-size: 28px;
+      color: var(--ink);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .success-text span {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      opacity: .85;
+    }
+
+    /* ── Lemon (split column) ── */
+    .hero-lemon-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 460px;
+      aspect-ratio: 1/1;
+      margin: 0 auto;
+      display: grid; place-items: center;
+    }
+    .lemon-img {
+      width: 100%; height: 100%;
+      filter: drop-shadow(0 28px 24px rgba(31,42,68,.22));
+    }
+    .lemon-ring {
+      position: absolute; inset: -14%;
+      border: 3px dashed rgba(31,42,68,.12);
+      border-radius: 50%;
+      animation: spinLemon 28s linear infinite reverse;
+    }
+
+    /* ── Doodles ── */
+    .doodle {
+      position: absolute;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .doodle.squiggle-top {
+      top: 16%; left: 3%;
+      width: 72px;
+      animation: floatA 6s ease-in-out infinite;
+    }
+    .doodle.star-right {
+      top: 12%; right: 4%;
+      width: 50px;
+      animation: spinLemon 16s linear infinite;
+    }
+    .doodle.leaf-bottom {
+      bottom: 12%; right: 4%;
+      width: 60px;
+      transform: rotate(-18deg);
+      animation: floatB 5s ease-in-out infinite;
+    }
+
+    /* ── Footer ── */
+    .foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 40px 24px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      color: var(--ink);
+      opacity: .7;
+    }
+    .foot-brand { font-family: var(--font-brand); font-size: 22px; opacity: 1; }
+    .foot-links { display: flex; gap: 20px; }
+    .foot-links a {
+      color: inherit;
+      text-decoration: none;
+      opacity: .8;
+      transition: opacity .15s;
+    }
+    .foot-links a:hover { opacity: 1; }
+
+    /* ── Animations ── */
+    @keyframes spinLemon  { to { transform: rotate(360deg); } }
+    @keyframes floatA {
+      0%,100% { transform: translateY(0) rotate(-4deg); }
+      50%     { transform: translateY(-18px) rotate(4deg); }
+    }
+    @keyframes floatB {
+      0%,100% { transform: rotate(-18deg) translateY(0); }
+      50%     { transform: rotate(-8deg) translateY(-12px); }
+    }
+    @keyframes wobbleLemon {
+      0%,100% { transform: rotate(-6deg) scale(1); }
+      50%     { transform: rotate(6deg) scale(1.03); }
+    }
+    @keyframes rise {
+      0%   { transform: translateY(0) translateX(0); opacity: 0; }
+      10%  { opacity: 1; }
+      100% { transform: translateY(-110vh) translateX(30px); opacity: 0; }
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%     { opacity: .35; transform: scale(.65); }
+    }
+    @keyframes popIn {
+      from { transform: scale(.88); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Mobile ── */
+    @media (max-width: 720px) {
+      .topbar { padding: 16px 20px; }
+      .topbar .brand { font-size: 34px; }
+      .main {
+        grid-template-columns: 1fr;
+        padding: 0 20px;
+        gap: 16px;
+      }
+      .hero-lemon-wrap { display: none; }
+      .foot { padding: 14px 20px 20px; flex-direction: column; gap: 8px; text-align: center; }
+      .foot-links { justify-content: center; }
+      .doodle { display: none; }
+      h1 { font-size: clamp(38px, 10vw, 60px); }
+    }
+    @media (max-height: 640px) {
+      .doodle { display: none; }
+      h1 { font-size: clamp(34px, 5.5vmin, 60px); }
+    }
+  </style>
+</head>
+<body>
+  <!--
+    ╔══════════════════════════════════════════════════════╗
+    ║  SUPABASE SETUP — run once in your SQL Editor        ║
+    ╠══════════════════════════════════════════════════════╣
+    ║                                                      ║
+    ║  create table public.waitlist (                      ║
+    ║    id         uuid        default gen_random_uuid()  ║
+    ║                           primary key,               ║
+    ║    email      text        not null,                  ║
+    ║    zip        text,                                  ║
+    ║    created_at timestamptz default now()              ║
+    ║  );                                                  ║
+    ║                                                      ║
+    ║  create unique index waitlist_email_idx              ║
+    ║    on public.waitlist (lower(email));                ║
+    ║                                                      ║
+    ║  alter table public.waitlist                         ║
+    ║    enable row level security;                        ║
+    ║                                                      ║
+    ║  create policy "Public insert" on public.waitlist    ║
+    ║    for insert to anon with check (true);             ║
+    ║                                                      ║
+    ║  Then replace the two values below ↓                 ║
+    ╚══════════════════════════════════════════════════════╝
+  -->
+  <script>
+    window.__ZING = {
+      supabaseUrl: 'https://YOUR_PROJECT_ID.supabase.co',
+      supabaseKey: 'YOUR_ANON_KEY_HERE'
+    };
+  </script>
+
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    /* ── Supabase client ── */
+    const { supabaseUrl, supabaseKey } = window.__ZING;
+    const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    /* ── Lemon SVGs ── */
+    function LemonWhole({ className }) {
+      return (
+        <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" className={className}>
+          <ellipse cx="120" cy="138" rx="92" ry="80" fill="#FFD93D" stroke="#1F2A44" strokeWidth="8"/>
+          <ellipse cx="34"  cy="138" rx="14" ry="9"  fill="#FFD93D" stroke="#1F2A44" strokeWidth="8"/>
+          <ellipse cx="206" cy="138" rx="14" ry="9"  fill="#FFD93D" stroke="#1F2A44" strokeWidth="8"/>
+          <path d="M 70 90 Q 92 70 130 76" stroke="#FAF0DC" strokeWidth="8" fill="none" strokeLinecap="round" opacity=".9"/>
+          <g fill="#1F2A44">
+            <circle cx="92"  cy="148" r="3.2"/>
+            <circle cx="124" cy="160" r="3.2"/>
+            <circle cx="156" cy="142" r="3.2"/>
+            <circle cx="110" cy="184" r="3.2"/>
+            <circle cx="148" cy="180" r="3.2"/>
+            <circle cx="82"  cy="178" r="3.2"/>
+          </g>
+        </svg>
+      );
+    }
+
+    function LemonSlice({ className }) {
+      const wedges = Array.from({ length: 8 });
+      return (
+        <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" className={className}>
+          <circle cx="120" cy="120" r="104" fill="#FFD93D" stroke="#1F2A44" strokeWidth="8"/>
+          <circle cx="120" cy="120" r="88"  fill="#FAF0DC" stroke="#1F2A44" strokeWidth="4"/>
+          <circle cx="120" cy="120" r="72"  fill="#FFE96B"/>
+          <g stroke="#1F2A44" strokeWidth="4" fill="none" strokeLinecap="round">
+            {wedges.map((_, i) => {
+              const a = (i * Math.PI) / 4;
+              return <line key={i} x1="120" y1="120" x2={120 + Math.cos(a) * 72} y2={120 + Math.sin(a) * 72}/>;
+            })}
+          </g>
+          <g fill="#FFD93D" stroke="#1F2A44" strokeWidth="2">
+            {wedges.map((_, i) => {
+              const a = (i * Math.PI) / 4 + Math.PI / 8;
+              const x = 120 + Math.cos(a) * 42, y = 120 + Math.sin(a) * 42;
+              return <ellipse key={i} cx={x} cy={y} rx="14" ry="22" transform={`rotate(${i*45+22.5} ${x} ${y})`}/>;
+            })}
+          </g>
+          <circle cx="120" cy="120" r="6" fill="#1F2A44"/>
+        </svg>
+      );
+    }
+
+    /* ── Doodles ── */
+    function Doodles() {
+      return (
+        <>
+          <svg className="doodle squiggle-top" viewBox="0 0 100 40">
+            <path d="M 4 20 Q 16 4, 28 20 T 52 20 T 76 20 T 96 20" fill="none" stroke="#1F2A44" strokeWidth="4" strokeLinecap="round"/>
+          </svg>
+          <svg className="doodle star-right" viewBox="0 0 60 60">
+            <path d="M 30 4 L 36 24 L 56 30 L 36 36 L 30 56 L 24 36 L 4 30 L 24 24 Z" fill="#FFD93D" stroke="#1F2A44" strokeWidth="3" strokeLinejoin="round"/>
+          </svg>
+          <svg className="doodle leaf-bottom" viewBox="0 0 60 60">
+            <path d="M 8 50 Q 4 18 30 6 Q 56 18 52 50 Q 30 40 8 50 Z" fill="#6DC9BE" stroke="#1F2A44" strokeWidth="4" strokeLinejoin="round"/>
+            <path d="M 30 10 L 30 48" stroke="#1F2A44" strokeWidth="3" strokeLinecap="round"/>
+          </svg>
+        </>
+      );
+    }
+
+    /* ── Bubbles ── */
+    function Bubbles({ count = 14 }) {
+      const items = useMemo(() =>
+        Array.from({ length: count }, () => ({
+          left: Math.random() * 100,
+          size: 10 + Math.random() * 48,
+          delay: Math.random() * 6,
+          duration: 7 + Math.random() * 8,
+        }))
+      , [count]);
+      return (
+        <div className="bubbles">
+          {items.map((b, i) => (
+            <i key={i} style={{
+              left: `${b.left}%`,
+              width: b.size, height: b.size,
+              animationDelay: `${b.delay}s`,
+              animationDuration: `${b.duration}s`,
+            }}/>
+          ))}
+        </div>
+      );
+    }
+
+    /* ── Door / Splash ── */
+    function Door({ open, onOpen }) {
+      return (
+        <div className={`door ${open ? "gone" : ""}`} onClick={onOpen} role="button" aria-label="Enter site">
+          <Bubbles count={18}/>
+          <div className="door-stack">
+            <div className="door-eyebrow">Loading freshness</div>
+            <LemonSlice className="door-lemon"/>
+            <div className="door-brand">Zing</div>
+            <div className="door-tag">Sparkling Lemonade · Est. Summer 2026</div>
+            <div className="door-cta">
+              <span className="pulse-dot"/>
+              <span>Tap to enter</span>
+              <span>→</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Signup Form ── */
+    function SignupForm() {
+      const [email, setEmail]       = useState("");
+      const [zip, setZip]           = useState("");
+      const [loading, setLoading]   = useState(false);
+      const [submitted, setSubmitted] = useState(false);
+      const [error, setError]       = useState(null);
+      const [emailErr, setEmailErr] = useState(false);
+
+      const onSubmit = async (e) => {
+        e.preventDefault();
+        const trimmedEmail = email.trim();
+        if (!trimmedEmail) { setEmailErr(true); return; }
+        setEmailErr(false);
+        setError(null);
+        setLoading(true);
+
+        try {
+          const { error: dbErr } = await db
+            .from('waitlist')
+            .insert([{ email: trimmedEmail.toLowerCase(), zip: zip.trim() || null }]);
+
+          if (dbErr) {
+            if (dbErr.code === '23505') {
+              // Already on the list — treat as a soft success
+              setSubmitted(true);
+            } else {
+              console.error(dbErr);
+              setError("Something went wrong. Please try again.");
+            }
+          } else {
+            setSubmitted(true);
+          }
+        } catch (err) {
+          console.error(err);
+          setError("Could not connect. Check your internet and try again.");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (submitted) {
+        return (
+          <div className="success" role="alert">
+            <div className="check" aria-hidden="true">✓</div>
+            <div className="success-text">
+              <strong>You're on the list!</strong>
+              <span>We'll ping {email} when Zing hits {zip ? zip : "your zip"}. 🍋</span>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <form className="form-wrap" onSubmit={onSubmit} noValidate>
+          <div className="fields-row">
+            <label className={`field email${emailErr ? " has-error" : ""}`}>
+              <input
+                type="email"
+                placeholder="you@zing.fan"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); if (emailErr) setEmailErr(false); }}
+                autoComplete="email"
+                aria-label="Email address"
+              />
+            </label>
+            <label className="field zip">
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9A-Za-z\s-]{3,10}"
+                placeholder="ZIP"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                autoComplete="postal-code"
+                aria-label="ZIP code"
+              />
+            </label>
+            <button type="submit" className="notify-btn" disabled={loading} aria-label="Join waitlist">
+              {loading
+                ? <span className="spinner" aria-label="Submitting…"/>
+                : <><span>Notify me</span><span className="arrow" aria-hidden="true">→</span></>
+              }
+            </button>
+          </div>
+
+          {error    && <div className="form-error-msg" role="alert">⚠ {error}</div>}
+          {emailErr && <div className="form-error-msg" role="alert">Please enter a valid email.</div>}
+          {!error && !emailErr && (
+            <div className="form-meta">No spam. Just zest. Unsubscribe anytime.</div>
+          )}
+        </form>
+      );
+    }
+
+    /* ── Landing ── */
+    function Landing() {
+      return (
+        <div className="stage">
+          <header className="topbar">
+            <div className="brand" aria-label="Zing">Zing</div>
+            <div className="chip" role="status"><span className="pulse-dot" aria-hidden="true"/> Coming soon</div>
+          </header>
+
+          <main className="main">
+            <Doodles/>
+            <div className="hero-text">
+              <div className="eyebrow">Sparkling Lemonade · Get notified</div>
+              <h1>
+                We're <span className="pop">squeezing</span> the details.
+              </h1>
+              <p className="sub">
+                Bottling sunshine, dialing the zing, loading the trucks.
+                Drop your email and we'll ping you the second Zing lands in your zip.
+              </p>
+              <SignupForm/>
+            </div>
+
+            <div className="hero-lemon-wrap" aria-hidden="true">
+              <div className="lemon-ring"/>
+              <LemonWhole className="lemon-img" style={{ animation: "wobbleLemon 3.5s ease-in-out infinite" }}/>
+            </div>
+          </main>
+
+          <footer className="foot">
+            <span className="foot-brand" aria-label="Zing">Zing</span>
+            <div className="foot-links">
+              <a href="https://instagram.com/drinkzing" target="_blank" rel="noopener noreferrer">Instagram</a>
+              <a href="https://twitter.com/drinkzing"   target="_blank" rel="noopener noreferrer">Twitter</a>
+              <span>© 2026 Zing Beverage Co.</span>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    /* ── App ── */
+    function App() {
+      const [doorOpen, setDoorOpen] = useState(false);
+
+      useEffect(() => {
+        const onKey = (e) => { if (e.key === "Escape" && doorOpen) setDoorOpen(false); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+      }, [doorOpen]);
+
+      return (
+        <>
+          <div className="texture" aria-hidden="true"/>
+          <Door open={doorOpen} onOpen={() => setDoorOpen(true)}/>
+          <Landing/>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
